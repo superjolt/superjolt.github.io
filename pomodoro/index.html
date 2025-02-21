@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Pomodoro Timer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+    #timer { font-size: 48px; margin-bottom: 20px; }
+    button { font-size: 24px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <div id="timer">25:00</div>
+  <button id="startBtn">Start Pomodoro</button>
+
+  <script>
+    // Session durations (in seconds)
+    const workDuration = 25 * 60;   // 25 minutes
+    const breakDuration = 5 * 60;   // 5 minutes
+
+    let currentState = 'work';      // 'work' or 'break'
+    let currentDuration = workDuration;
+    let timerInterval = null;
+
+    // Update favicon to reflect state: red circle with "W" or green circle with "B"
+    function updateFavicon(state) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = state === 'work' ? '#e74c3c' : '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(32, 32, 30, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(state === 'work' ? 'W' : 'B', 32, 32);
+      
+      let link = document.getElementById('favicon');
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'favicon';
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = canvas.toDataURL('image/png');
+    }
+
+    // Format seconds into MM:SS
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // Update timer display and title (like a dashboard clock)
+    function updateDisplay(time) {
+      document.getElementById('timer').textContent = formatTime(time);
+      document.title = (currentState === 'work' ? 'Work' : 'Break') + ': ' + formatTime(time);
+    }
+
+    // Play a simple beep when a session ends
+    function ringSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+      oscillator.connect(audioCtx.destination);
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), 1000);
+    }
+
+    // Start a session timer and update display every second
+    function startTimer(duration) {
+      let timeLeft = duration;
+      updateFavicon(currentState);
+      updateDisplay(timeLeft);
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateDisplay(timeLeft);
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          ringSound();
+          // Toggle session state
+          currentState = currentState === 'work' ? 'break' : 'work';
+          currentDuration = currentState === 'work' ? workDuration : breakDuration;
+          // Automatically start the next session after a 3-second pause
+          setTimeout(() => startTimer(currentDuration), 3000);
+        }
+      }, 1000);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      if (timerInterval) clearInterval(timerInterval);
+      currentState = 'work';
+      currentDuration = workDuration;
+      startTimer(currentDuration);
+    });
+
+    // Initialize display and favicon on load
+    updateFavicon(currentState);
+    updateDisplay(currentDuration);
+  </script>
+</body>
+</html>
