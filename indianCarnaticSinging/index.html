@@ -3,11 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Recording and Rating</title>
+  <title>Voice Recording and Rating for Carnatic Music</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <h1>Record Your Voice and Rate It</h1>
+  
+  <!-- Piece Selection -->
+  <label for="pieceSelect">Select Piece:</label>
+  <select id="pieceSelect">
+    <option value="">--Select a piece--</option>
+    <option value="sarali1">Sarali Varishai 1</option>
+    <option value="sarali2">Sarali Varishai 2</option>
+    <!-- Add more pieces as needed -->
+  </select>
+  
+  <!-- Sruthi Selection -->
+  <label for="sruthiSelect">Select Sruthi (Sa note):</label>
+  <select id="sruthiSelect">
+    <option value="">--Select sruthi--</option>
+    <option value="C4">C4 (261.63 Hz)</option>
+    <option value="C#4">C#4 (277.18 Hz)</option>
+    <option value="D4">D4 (293.66 Hz)</option>
+    <!-- Add more options up to B4 or higher if needed -->
+  </select>
   
   <!-- Recording Controls -->
   <button id="startBtn">Start Recording</button>
@@ -53,6 +72,9 @@
   
   <!-- Save Button -->
   <button id="saveBtn" disabled>Save Recording</button>
+  
+  <!-- Accuracy Display -->
+  <div id="accuracyDisplay"></div>
   
   <!-- Saved Recordings Grid -->
   <h2>Saved Recordings</h2>
