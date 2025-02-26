@@ -8,6 +8,7 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const saveBtn = document.getElementById('saveBtn');
 const audio = document.getElementById('audio');
+const sruthiAudio = document.getElementById('sruthiAudio');
 const ratingDisplay = document.getElementById('ratingDisplay');
 const ratingInputs = document.querySelectorAll('.rating input');
 const recordingsGrid = document.getElementById('recordingsGrid');
@@ -24,6 +25,7 @@ let recordedChunks = [];
 let currentBlob = null;
 let selectedPiece;
 let selectedSruthi;
+const audioSources = new Map(); // To store sources for audio elements
 
 // AudioContext and Analyser for visualization
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -31,29 +33,47 @@ const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 2048;
 let animationFrameId;
 
-// Define pieces and note mappings
+// Define ragas and pieces
+const ragas = {
+  mayamalavagowla: {
+    arohanam: { 's': 1, 'r': 256 / 243, 'g': 32 / 27, 'm': 4 / 3, 'p': 3 / 2, 'd': 128 / 81, 'n': 16 / 9, 'S': 2 },
+    avarohanam: { 'S': 2, 'n': 16 / 9, 'd': 128 / 81, 'p': 3 / 2, 'm': 4 / 3, 'g': 32 / 27, 'r': 256 / 243, 's': 1 }
+  }
+  // Add more ragas like 'kamas' later when you provide their sequences
+};
+
 const pieces = {
-  sarali1: ['s', 'r', 'g', 'm', 'p', 'd', 'n', 'S', 'S', 'n', 'd', 'p', 'm', 'g', 'r', 's'],
-  sarali2: ['s', 'r', 's', 'r', 's', 'r', 'g', 'm', 's', 'r', 'g', 'm', 'p', 'd', 'n', 'S', 'S', 'n', 'S', 'n', 'S', 'n', 'd', 'p', 'S', 'n', 'd', 'p', 'm', 'g', 'r', 's'],
-  // Add more Sarali Varishais (3-9) or geetams here based on your notation
+  sarali1: { raga: 'mayamalavagowla', sequence: ['s', 'r', 'g', 'm', 'p', 'd', 'n', 'S', 'S', 'n', 'd', 'p', 'm', 'g', 'r', 's'] },
+  sarali2: { raga: 'mayamalavagowla', sequence: ['s', 'r', 's', 'r', 's', 'r', 'g', 'm', 's', 'r', 'g', 'm', 'p', 'd', 'n', 'S', 'S', 'n', 'S', 'n', 'S', 'n', 'd', 'p', 'S', 'n', 'd', 'p', 'm', 'g', 'r', 's'] }
+  // Add more pieces with their ragas later
 };
 
 const noteFrequencies = {
+  'G#3': 207.65,
+  'A3': 220.00,
+  'A#3': 233.08,
+  'B3': 246.94,
   'C4': 261.63,
   'C#4': 277.18,
   'D4': 293.66,
-  // Add more notes (e.g., 'E4': 329.63, etc.) as needed
-};
-
-const noteRatios = {
-  's': 1,
-  'r': 256 / 243,  // Ri1 in Mayamalavagowla raga
-  'g': 32 / 27,    // Ga3
-  'm': 4 / 3,      // Ma1
-  'p': 3 / 2,      // Pa
-  'd': 128 / 81,   // Da1
-  'n': 16 / 9,     // Ni3
-  'S': 2,          // Upper Sa
+  'D#4': 311.13,
+  'E4': 329.63,
+  'F4': 349.23,
+  'F#4': 369.99,
+  'G4': 392.00,
+  'G#4': 415.30,
+  'A4': 440.00,
+  'A#4': 466.16,
+  'B4': 493.88,
+  'C5': 523.25,
+  'C#5': 554.37,
+  'D5': 587.33,
+  'D#5': 622.25,
+  'E5': 659.25,
+  'F5': 698.46,
+  'F#5': 739.99,
+  'G5': 783.99,
+  'G#5': 830.61
 };
 
 // Start recording
@@ -68,42 +88,53 @@ startBtn.addEventListener('click', async () => {
   }
   selectedPiece = pieceSelect.value;
   selectedSruthi = sruthiSelect.value;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = (e) => {
-      recordedChunks.push(e.data);
-    };
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-      const url = URL.createObjectURL(blob);
-      audio.src = url;
-      audio.addEventListener('error', (e) => console.error('Main audio playback error:', e));
-      currentBlob = blob;
-      recordedChunks = [];
-      saveBtn.disabled = false;
 
-      // Compute note sequence and accuracy
-      const sruthiFrequency = noteFrequencies[selectedSruthi];
-      const detectedSequence = await detectNoteSequence(blob, sruthiFrequency);
-      const expectedSequence = pieces[selectedPiece];
-      let correctCount = 0;
-      const minLength = Math.min(detectedSequence.length, expectedSequence.length);
-      for (let i = 0; i < minLength; i++) {
-        if (detectedSequence[i] === expectedSequence[i]) {
-          correctCount++;
+  // Play sruthi sound
+  const sruthiFrequency = noteFrequencies[selectedSruthi];
+  const baseFrequency = noteFrequencies['G#4']; // Assuming sruthi.mp3 is G#4
+  const playbackRate = sruthiFrequency / baseFrequency;
+  sruthiAudio.playbackRate = playbackRate;
+  sruthiAudio.play();
+
+  // Start recording after a short delay
+  setTimeout(async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => {
+        recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        audio.src = url;
+        audio.addEventListener('error', (e) => console.error('Main audio playback error:', e));
+        currentBlob = blob;
+        recordedChunks = [];
+        saveBtn.disabled = false;
+
+        const sruthiFrequency = noteFrequencies[selectedSruthi];
+        const raga = pieces[selectedPiece].raga;
+        const detectedSequence = await detectNoteSequence(blob, sruthiFrequency, raga);
+        const expectedSequence = pieces[selectedPiece].sequence;
+        let correctCount = 0;
+        const minLength = Math.min(detectedSequence.length, expectedSequence.length);
+        for (let i = 0; i < minLength; i++) {
+          if (detectedSequence[i] === expectedSequence[i]) {
+            correctCount++;
+          }
         }
-      }
-      const accuracy = (correctCount / expectedSequence.length * 100).toFixed(2);
-      accuracyDisplay.textContent = `Alignment Accuracy: ${accuracy}%`;
-    };
-    mediaRecorder.start();
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-  } catch (err) {
-    console.error('Error accessing microphone:', err);
-    alert('Could not access microphone. Please allow microphone access.');
-  }
+        const accuracy = (correctCount / expectedSequence.length * 100).toFixed(2);
+        accuracyDisplay.textContent = `Alignment Accuracy: ${accuracy}%`;
+      };
+      mediaRecorder.start();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      alert('Could not access microphone. Please allow microphone access.');
+    }
+  }, 2000); // 2-second delay for sruthi sound
 });
 
 // Stop recording
@@ -179,9 +210,13 @@ function renderRecordings() {
 
     // Visualization for saved recordings
     audioEl.addEventListener('play', () => {
-      const source = audioCtx.createMediaElementSource(audioEl);
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
+      let source = audioSources.get(audioEl);
+      if (!source) {
+        source = audioCtx.createMediaElementSource(audioEl);
+        audioSources.set(audioEl, source);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+      }
       visualize();
     });
     audioEl.addEventListener('pause', () => cancelAnimationFrame(animationFrameId));
@@ -191,7 +226,6 @@ function renderRecordings() {
 
 // Visualize frequency data
 function visualize() {
-  console.log('visualizing'); // Check if this appears in the console when playing audio
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
   analyser.getByteFrequencyData(dataArray);
@@ -210,34 +244,39 @@ function visualize() {
 
 // Visualization for main audio
 audio.addEventListener('play', () => {
-  const source = audioCtx.createMediaElementSource(audio);
-  source.connect(analyser);
-  analyser.connect(audioCtx.destination);
+  let source = audioSources.get(audio);
+  if (!source) {
+    source = audioCtx.createMediaElementSource(audio);
+    audioSources.set(audio, source);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+  }
   visualize();
 });
 audio.addEventListener('pause', () => cancelAnimationFrame(animationFrameId));
 audio.addEventListener('ended', () => cancelAnimationFrame(animationFrameId));
 
 // Pitch detection functions
-async function detectNoteSequence(blob, sruthiFrequency) {
+async function detectNoteSequence(blob, sruthiFrequency, raga) {
   const arrayBuffer = await blob.arrayBuffer();
   const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
   const sampleRate = audioBuffer.sampleRate;
-  const channelData = audioBuffer.getChannelData(0); // Mono audio
+  const channelData = audioBuffer.getChannelData(0);
 
   const chunkSize = 2048;
   const detectedPitches = [];
   for (let i = 0; i < channelData.length; i += chunkSize) {
     const chunk = channelData.slice(i, i + chunkSize);
     if (chunk.length < chunkSize) break;
-    const frequency = getPitch(chunk, sampleRate);
-    if (frequency) detectedPitches.push(frequency);
+    const [frequency, clarity] = pitchy.findPitch(chunk, sampleRate);
+    if (clarity > 0.9) {
+      detectedPitches.push(frequency);
+    }
   }
-  // Group consecutive similar pitches into notes
   const noteSequence = [];
   let currentNote = null;
   detectedPitches.forEach(freq => {
-    const note = getNote(freq, sruthiFrequency);
+    const note = getNote(freq, sruthiFrequency, raga);
     if (note && note !== currentNote) {
       noteSequence.push(note);
       currentNote = note;
@@ -246,27 +285,8 @@ async function detectNoteSequence(blob, sruthiFrequency) {
   return noteSequence;
 }
 
-function getPitch(samples, sampleRate) {
-  // Basic autocorrelation for pitch detection
-  let maxCorr = 0;
-  let bestLag = 0;
-  for (let lag = 20; lag < 1000; lag++) { // Limit range for human voice frequencies
-    let corr = 0;
-    for (let i = 0; i < samples.length - lag; i++) {
-      corr += samples[i] * samples[i + lag];
-    }
-    if (corr > maxCorr) {
-      maxCorr = corr;
-      bestLag = lag;
-    }
-  }
-  if (maxCorr > 0.1) { // Threshold to filter out noise
-    return sampleRate / bestLag;
-  }
-  return null;
-}
-
-function getNote(frequency, sruthiFrequency) {
+function getNote(frequency, sruthiFrequency, raga) {
+  const noteRatios = { ...ragas[raga].arohanam, ...ragas[raga].avarohanam };
   let minDistance = Infinity;
   let closestNote = null;
   for (const [note, ratio] of Object.entries(noteRatios)) {

@@ -22,16 +22,38 @@
   <label for="sruthiSelect">Select Sruthi (Sa note):</label>
   <select id="sruthiSelect">
     <option value="">--Select sruthi--</option>
+    <option value="G#3">G#3 (207.65 Hz)</option>
+    <option value="A3">A3 (220.00 Hz)</option>
+    <option value="A#3">A#3 (233.08 Hz)</option>
+    <option value="B3">B3 (246.94 Hz)</option>
     <option value="C4">C4 (261.63 Hz)</option>
     <option value="C#4">C#4 (277.18 Hz)</option>
     <option value="D4">D4 (293.66 Hz)</option>
-    <!-- Add more options up to B4 or higher if needed -->
+    <option value="D#4">D#4 (311.13 Hz)</option>
+    <option value="E4">E4 (329.63 Hz)</option>
+    <option value="F4">F4 (349.23 Hz)</option>
+    <option value="F#4">F#4 (369.99 Hz)</option>
+    <option value="G4">G4 (392.00 Hz)</option>
+    <option value="G#4">G#4 (415.30 Hz)</option>
+    <option value="A4">A4 (440.00 Hz)</option>
+    <option value="A#4">A#4 (466.16 Hz)</option>
+    <option value="B4">B4 (493.88 Hz)</option>
+    <option value="C5">C5 (523.25 Hz)</option>
+    <option value="C#5">C#5 (554.37 Hz)</option>
+    <option value="D5">D5 (587.33 Hz)</option>
+    <option value="D#5">D#5 (622.25 Hz)</option>
+    <option value="E5">E5 (659.25 Hz)</option>
+    <option value="F5">F5 (698.46 Hz)</option>
+    <option value="F#5">F#5 (739.99 Hz)</option>
+    <option value="G5">G5 (783.99 Hz)</option>
+    <option value="G#5">G#5 (830.61 Hz)</option>
   </select>
   
   <!-- Recording Controls -->
   <button id="startBtn">Start Recording</button>
   <button id="stopBtn" disabled>Stop Recording</button>
   <audio id="audio" controls></audio>
+  <audio id="sruthiAudio" src="sounds/sruthi.mp3"></audio>
   
   <!-- Star Rating System -->
   <div class="rating">
@@ -84,6 +106,7 @@
   <h2>Frequency Visualization</h2>
   <canvas id="visualizer" width="600" height="200"></canvas>
   
+  <script src="https://unpkg.com/pitchy@4.0.2/build/pitchy.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
